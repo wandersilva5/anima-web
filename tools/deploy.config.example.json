@@ -1,0 +1,9 @@
+{
+  "host": "ftp.trustchoicereviews.com",
+  "port": 21,
+  "tls": true,
+  "user": "u000000000",
+  "password": "",
+  "remotePublic": "/public_html/femipro",
+  "remotePrivate": "/anima"
+}

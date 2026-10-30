@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Galeria Anima">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a1746" />
+      <stop offset="1" stop-color="#0b0d10" />
+    </linearGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c4b5fd" />
+      <stop offset="1" stop-color="#7c3aed" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <g fill="none" stroke="url(#stroke)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="128" y="128" width="256" height="256" rx="52" />
+    <circle cx="205" cy="207" r="21" fill="url(#stroke)" stroke="none" />
+    <path d="M144 334l70-74 56 58 40-38 58 58" />
+  </g>
+</svg>

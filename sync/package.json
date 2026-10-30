@@ -1,0 +1,17 @@
+{
+  "name": "anima-gallery-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel local: conexao com a producao, numeros do acervo e sincronizacao do historico do Anima.",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "electron": "^32.2.0",
+    "typescript": "^5.6.3"
+  }
+}
