@@ -20,6 +20,7 @@ server/public/index.html
 
 # documentacao interna de infraestrutura (nao publicar: descreve servidor, banco e migracao)
 MIGRAR-HOSPEDAGEM.md
+hospedagem_gratis.md
 
 # metadados da IDE
 .qoder/
