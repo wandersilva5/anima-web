@@ -98,7 +98,7 @@ Tudo trafega JSON em `/api`, exceto as mídias.
 |---|---|---|
 | Saúde | `GET /api/health` | pública |
 | Sessão | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/admin/password` | login é público; o resto exige sessão |
-| Acervo | `GET /api/images`, `GET /api/images/{uuid}`, `POST /api/images/{uuid}/favorite`, `POST /api/images/{uuid}/delete` | sessão |
+| Acervo | `GET /api/images`, `GET /api/images/{uuid}`, `POST /api/images/{uuid}/favorite`, `POST /api/images/{uuid}/delete`, `POST /api/images/{uuid}/rotate` | sessão |
 | Filtros | `GET /api/facets`, `GET /api/dictionary`, `GET /api/search/tags`, `GET /api/stats` | sessão |
 | Lixeira | `GET /api/admin/trash`, `POST /api/admin/images/{uuid}/restore` | sessão |
 | Sincronização | `POST /api/sync/plan`, `POST /api/sync/upload`, `GET /api/sync/stats`, `GET /api/sync/ping`, `GET /api/sync/deletions`, `POST /api/sync/deletions/{id}/ack` | Bearer token |
@@ -109,6 +109,12 @@ devolvido por `/api/auth/me`.
 
 As imagens **não** são servidas como arquivo estático: o `.htaccess` manda `/media/*` para o
 front controller, que valida a sessão antes de entregar o arquivo. Sem login, a resposta é `401`.
+
+As URLs de mídia levam `?v=<mtime>` no final: quando o arquivo muda (rotação, por exemplo), o
+endereço muda e nem o cache do navegador nem o service worker continuam mostrando a versão antiga.
+
+`POST /api/images/{uuid}/rotate` (`{"direction":"cw"|"ccw"}`) gira o **original** em 90 graus,
+regenera `display` e `thumb` e atualiza largura/altura no banco.
 
 ---
 

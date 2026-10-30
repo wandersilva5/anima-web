@@ -27,6 +27,79 @@ final class Media
         return Config::mediaUrl($relative);
     }
 
+    /**
+     * URL com a versao do arquivo (mtime) no final.
+     * Necessario porque o navegador e o service worker guardam a midia por muito tempo:
+     * depois de girar a imagem o endereco muda e o cache antigo e descartado.
+     */
+    public static function versionedUrl(string $relative): string
+    {
+        $url = self::url($relative);
+        $path = self::absolute($relative);
+        $mtime = is_file($path) ? filemtime($path) : false;
+        if ($mtime === false) {
+            return $url;
+        }
+        return $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $mtime;
+    }
+
+    /**
+     * Gira o arquivo original em 90 graus e devolve as novas dimensoes.
+     * O arquivo e reescrito no mesmo caminho: PNG/WebP sao sem perda, JPEG sai com qualidade 92.
+     *
+     * @return array{width:int,height:int}
+     */
+    public static function rotateFile(string $relative, string $direction): array
+    {
+        $path = self::absolute($relative);
+        if (!is_file($path)) {
+            throw new RuntimeException('Arquivo original nao encontrado.');
+        }
+
+        $info = @getimagesize($path);
+        if ($info === false) {
+            throw new RuntimeException('Arquivo de imagem invalido.');
+        }
+        $type = (int) $info[2];
+
+        $image = self::load($path, $type);
+        if ($image === null) {
+            throw new RuntimeException('Formato de imagem nao suportado pelo GD.');
+        }
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        // imagerotate gira no sentido horario com angulo positivo.
+        $rotated = imagerotate($image, $direction === 'ccw' ? 90 : -90, 0);
+        imagedestroy($image);
+        if (!$rotated instanceof GdImage) {
+            throw new RuntimeException('Falha ao girar a imagem.');
+        }
+        imagealphablending($rotated, false);
+        imagesavealpha($rotated, true);
+
+        $written = match ($type) {
+            IMAGETYPE_PNG => imagepng($rotated, $path, 6),
+            IMAGETYPE_JPEG => imagejpeg($rotated, $path, 92),
+            IMAGETYPE_WEBP => function_exists('imagewebp') ? imagewebp($rotated, $path, 92) : false,
+            IMAGETYPE_GIF => imagegif($rotated, $path),
+            default => false,
+        };
+
+        $width = imagesx($rotated);
+        $height = imagesy($rotated);
+        imagedestroy($rotated);
+
+        if (!$written) {
+            throw new RuntimeException('Falha ao gravar a imagem girada.');
+        }
+
+        @chmod($path, 0644);
+        clearstatcache(true, $path);
+
+        return ['width' => $width, 'height' => $height];
+    }
+
     public static function storeOriginal(string $tmpPath, string $sha, string $ext = 'png'): string
     {
         $relative = 'o/' . self::shard($sha) . '/' . $sha . '.' . $ext;

@@ -114,6 +114,32 @@ export default function Viewer() {
     }
   };
 
+  // Gira a imagem no servidor (90 graus) e troca as URLs por versoes novas,
+  // para o navegador e o service worker nao mostrarem a imagem antiga.
+  const rotateImage = useCallback(
+    async (direction: 'cw' | 'ccw') => {
+      if (!detail || busy) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const result = await api.rotate(detail.uuid, direction);
+        const updated: ImageDetail = {
+          ...detail,
+          width: result.width,
+          height: result.height,
+          urls: result.urls,
+        };
+        cache.current.set(detail.uuid, updated);
+        setDetail(updated);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Nao foi possivel girar a imagem.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, detail],
+  );
+
   const askDelete = () => {
     if (!detail || busy) return;
     if (!confirming) {
@@ -177,11 +203,15 @@ export default function Viewer() {
         else back();
       } else if (event.key === 'm' || event.key === 'M') {
         setMetaOpen((value) => !value);
+      } else if (event.key === 'r') {
+        void rotateImage('cw');
+      } else if (event.key === 'R') {
+        void rotateImage('ccw');
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [back, detail, go, metaOpen]);
+  }, [back, detail, go, metaOpen, rotateImage]);
 
   return (
     <div className="fixed inset-0 flex flex-col bg-ink-950">
@@ -234,6 +264,28 @@ export default function Viewer() {
               >
                 {detail?.position ? formatNumber(detail.position) : '—'}
                 <span className="text-white/50"> / {formatNumber(detail?.total ?? 0)}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void rotateImage('ccw')}
+                disabled={busy}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/40 text-white active:bg-black/60 disabled:opacity-40"
+                aria-label="Girar para a esquerda"
+                title="Girar para a esquerda (Shift+R)"
+              >
+                <Icon name="rotate" className="h-5 w-5 -scale-x-100" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void rotateImage('cw')}
+                disabled={busy}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/40 text-white active:bg-black/60 disabled:opacity-40"
+                aria-label="Girar para a direita"
+                title="Girar para a direita (R)"
+              >
+                <Icon name="rotate" className="h-5 w-5" />
               </button>
 
               <span className="truncate text-[11px] text-white/50">{detail?.model ?? ''}</span>

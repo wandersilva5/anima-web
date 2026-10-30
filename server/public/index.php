@@ -169,6 +169,19 @@ $router->add('POST', '#^/api/images/(?P<uuid>[0-9a-fA-F-]{36})/delete$#', static
     Http::json(Images::softDelete($params['uuid']));
 });
 
+// Gira 90 graus: direction = cw (horario, padrao) ou ccw (anti-horario).
+$router->add('POST', '#^/api/images/(?P<uuid>[0-9a-fA-F-]{36})/rotate$#', static function (array $params): void {
+    Auth::requireCsrf();
+    $body = Http::jsonBody();
+    $direction = ($body['direction'] ?? 'cw') === 'ccw' ? 'ccw' : 'cw';
+    try {
+        Http::json(Images::rotate($params['uuid'], $direction));
+    } catch (RuntimeException $error) {
+        app_log('error', 'Falha ao girar imagem', ['uuid' => $params['uuid'], 'erro' => $error->getMessage()]);
+        Http::error('rotate_failed', $error->getMessage(), 500);
+    }
+});
+
 $router->add('GET', '#^/api/facets$#', static function (): void {
     Auth::requireUser();
     Http::json(Images::facets(Images::filtersFromRequest()));

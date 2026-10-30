@@ -23,7 +23,8 @@ export type IconName =
   | 'tag'
   | 'upload'
   | 'lock'
-  | 'calendar';
+  | 'calendar'
+  | 'rotate';
 
 const paths: Record<IconName, ReactNode> = {
   search: (
@@ -131,6 +132,12 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <rect x="3" y="5" width="18" height="16" rx="2" />
       <path d="M8 3v4M16 3v4M3 11h18" />
+    </>
+  ),
+  rotate: (
+    <>
+      <path d="M20 12a8 8 0 1 1-2.4-5.7" />
+      <path d="M20 3.5V8h-4.5" />
     </>
   ),
 };

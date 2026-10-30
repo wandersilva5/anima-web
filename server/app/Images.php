@@ -205,8 +205,8 @@ final class Images
     {
         return [
             'uuid' => $row['uuid'],
-            'thumb' => Media::url($row['path_thumb']),
-            'display' => Media::url($row['path_disp']),
+            'thumb' => Media::versionedUrl($row['path_thumb']),
+            'display' => Media::versionedUrl($row['path_disp']),
             'width' => (int) $row['width'],
             'height' => (int) $row['height'],
             'favorite' => (int) $row['favorite'] === 1,
@@ -292,9 +292,9 @@ final class Images
             'folder' => $row['folder'],
             'filename' => $row['filename'],
             'urls' => [
-                'orig' => Media::url($row['path_orig']),
-                'display' => Media::url($row['path_disp']),
-                'thumb' => Media::url($row['path_thumb']),
+                'orig' => Media::versionedUrl($row['path_orig']),
+                'display' => Media::versionedUrl($row['path_disp']),
+                'thumb' => Media::versionedUrl($row['path_thumb']),
             ],
             'width' => (int) $row['width'],
             'height' => (int) $row['height'],
@@ -463,6 +463,52 @@ final class Images
         return ['uuid' => $uuid, 'favorite' => $value];
     }
 
+    // ------------------------------------------------------------- rotacao
+
+    /**
+     * Gira a imagem em 90 graus (horario ou anti-horario), regenera as derivadas
+     * e atualiza as dimensoes no banco.
+     *
+     * @return array<string,mixed>
+     */
+    public static function rotate(string $uuid, string $direction): array
+    {
+        $row = Db::one(
+            'SELECT id, path_orig FROM images WHERE uuid = ? LIMIT 1',
+            [$uuid]
+        );
+        if ($row === null) {
+            Http::error('not_found', 'Imagem nao encontrada.', 404);
+        }
+
+        $dims = Media::rotateFile($row['path_orig'], $direction);
+
+        // As derivadas mantem o nome (hash do arquivo recebido) e sao reescritas
+        // a partir do original ja girado.
+        $sha = pathinfo((string) $row['path_orig'], PATHINFO_FILENAME);
+        $derived = Media::derive($row['path_orig'], $sha);
+
+        $bytes = (int) @filesize(Media::absolute($row['path_orig']));
+        Db::run(
+            'UPDATE images SET width = ?, height = ?, bytes = ?, path_disp = ?, path_thumb = ?, updated_at = NOW()
+              WHERE id = ?',
+            [$dims['width'], $dims['height'], $bytes, $derived['disp'], $derived['thumb'], $row['id']]
+        );
+
+        app_log('info', 'Imagem girada', ['uuid' => $uuid, 'direcao' => $direction]);
+
+        return [
+            'uuid' => $uuid,
+            'width' => $dims['width'],
+            'height' => $dims['height'],
+            'urls' => [
+                'orig' => Media::versionedUrl($row['path_orig']),
+                'display' => Media::versionedUrl($derived['disp']),
+                'thumb' => Media::versionedUrl($derived['thumb']),
+            ],
+        ];
+    }
+
     // --------------------------------------------------------------- lixeira
 
     public static function trashList(): array
@@ -476,7 +522,7 @@ final class Images
         return [
             'items' => array_map(static fn (array $r) => [
                 'uuid' => $r['uuid'],
-                'thumb' => Media::url($r['path_thumb']),
+                'thumb' => Media::versionedUrl($r['path_thumb']),
                 'deleted_at' => $r['deleted_at'],
                 'model' => $r['model_name'],
             ], $rows),

@@ -101,6 +101,12 @@ export const api = {
   softDelete: (uuid: string) =>
     request<{ uuid: string; deleted: boolean }>(`/api/images/${uuid}/delete`, { method: 'POST' }),
 
+  rotate: (uuid: string, direction: 'cw' | 'ccw') =>
+    request<{ uuid: string; width: number; height: number; urls: { orig: string; display: string; thumb: string } }>(
+      `/api/images/${uuid}/rotate`,
+      { method: 'POST', body: jsonBody({ direction }) },
+    ),
+
   trash: () => request<{ items: TrashItem[]; pending_local: number }>('/api/admin/trash'),
 
   restore: (uuid: string) =>
