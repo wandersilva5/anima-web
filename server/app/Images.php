@@ -148,7 +148,10 @@ final class Images
     public static function paginate(array $f, ?string $cursor, int $limit): array
     {
         $limit = max(1, min(96, $limit));
-        [$where, $params] = self::buildWhere($f);
+        [$where, $filterParams] = self::buildWhere($f);
+        // Parametros do cursor vao so para a consulta das linhas: o COUNT(*) usa
+        // apenas os filtros, senao o PDO recusa a quantidade de placeholders.
+        $rowsParams = $filterParams;
         $order = self::orderBy($f);
         $keyset = in_array($f['sort'], ['recentes', 'antigos'], true);
 
@@ -163,7 +166,7 @@ final class Images
                 } else {
                     $extra = ' AND (i.ts_ms < ? OR (i.ts_ms = ? AND i.id < ?))';
                 }
-                array_push($params, (int) $ts, (int) $ts, (int) $id);
+                array_push($rowsParams, (int) $ts, (int) $ts, (int) $id);
             } elseif (str_starts_with($cursor, 'o:')) {
                 $offset = max(0, (int) substr($cursor, 2));
             }
@@ -175,7 +178,7 @@ final class Images
              ' . self::fromClause() . ' ' . $where . $extra . '
              ORDER BY ' . $order . '
              LIMIT ' . ($limit + 1) . ' OFFSET ' . $offset,
-            $params
+            $rowsParams
         );
 
         $hasMore = count($rows) > $limit;
@@ -195,7 +198,7 @@ final class Images
 
         $total = (int) Db::value(
             'SELECT COUNT(*) ' . self::fromClause() . ' ' . $where,
-            $params
+            $filterParams
         );
 
         return ['items' => $items, 'next' => $next, 'total' => $total, 'sort' => $f['sort']];

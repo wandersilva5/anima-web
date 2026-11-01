@@ -30,6 +30,7 @@ export default function Gallery({ forceFavorites = false }: Props) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [facets, setFacets] = useState<Facets | null>(null);
   const [tagLabels, setTagLabels] = useState<Record<number, string>>({});
@@ -37,6 +38,9 @@ export default function Gallery({ forceFavorites = false }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [searchText, setSearchText] = useState(filters.q ?? '');
   const sentinel = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
+  const blockedRef = useRef(false);
+  const loadMoreRef = useRef<() => Promise<void>>(async () => undefined);
 
   const update = useCallback(
     (value: Filters) => {
@@ -50,6 +54,7 @@ export default function Gallery({ forceFavorites = false }: Props) {
     let alive = true;
     setLoading(true);
     setError(null);
+    setMoreError(null);
 
     api
       .images(query)
@@ -85,32 +90,45 @@ export default function Gallery({ forceFavorites = false }: Props) {
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (!next || loading || loadingMore) return;
+    if (!next || loading || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
       const result = await api.images(query, next);
       setItems((prev) => [...prev, ...result.items]);
       setNext(result.next);
       setTotal(result.total);
-    } catch {
-      /* silencioso: o sentinela tenta de novo */
+      setMoreError(null);
+    } catch (err) {
+      // Antes o erro era engolido e o observador tentava de novo sem parar,
+      // travando a pagina. Agora para e deixa o usuario decidir.
+      setMoreError(err instanceof Error ? err.message : 'Nao foi possivel carregar mais imagens.');
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [next, query, loading, loadingMore]);
+  }, [next, query, loading]);
+
+  useEffect(() => {
+    loadMoreRef.current = loadMore;
+    blockedRef.current = moreError !== null;
+  }, [loadMore, moreError]);
 
   useEffect(() => {
     const element = sentinel.current;
     if (!element) return;
+    // Observado uma unica vez: recriar o observer a cada render fazia ele
+    // disparar em sequencia e tremer a pagina.
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) void loadMore();
+        if (!entries[0]?.isIntersecting || blockedRef.current) return;
+        void loadMoreRef.current();
       },
       { rootMargin: '700px' },
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -300,7 +318,24 @@ export default function Gallery({ forceFavorites = false }: Props) {
       )}
 
       <div ref={sentinel} className="h-10" />
-      {loadingMore && <p className="pb-2 text-center text-[11px] text-zinc-500">Carregando mais…</p>}
+      {moreError ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-center text-[12px] text-red-200">
+          <p>{moreError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              blockedRef.current = false;
+              setMoreError(null);
+              void loadMore();
+            }}
+            className="mt-2 rounded-lg border border-ink-600 bg-ink-800 px-3 py-1.5 text-[12px] text-zinc-200"
+          >
+            Tentar de novo
+          </button>
+        </div>
+      ) : (
+        loadingMore && <p className="pb-2 text-center text-[11px] text-zinc-500">Carregando mais…</p>
+      )}
 
       <FiltersSheet
         open={sheetOpen}
