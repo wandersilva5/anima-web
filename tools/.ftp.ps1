@@ -49,6 +49,22 @@ switch ($Action) {
         $request.GetResponse().Close()
         Write-Output "apagado: $Remote"
     }
+    'get' {
+      $request = New-Req -Path $Remote -Method ([System.Net.WebRequestMethods+Ftp]::DownloadFile)
+      $response = $request.GetResponse()
+      $stream = $response.GetResponseStream()
+      $memory = New-Object System.IO.MemoryStream
+      $stream.CopyTo($memory)
+      $stream.Close()
+      $response.Close()
+      [System.IO.File]::WriteAllBytes($Local, $memory.ToArray())
+      Write-Output "baixado: $Remote -> $Local ($($memory.Length) bytes)"
+    }
+    'mkd' {
+      $request = New-Req -Path $Remote -Method ([System.Net.WebRequestMethods+Ftp]::MakeDirectory)
+      $request.GetResponse().Close()
+      Write-Output "criado: $Remote"
+    }
     'ls' {
         $path = if ($Remote) { $Remote } else { '/' }
         $request = New-Req -Path $path -Method ([System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails)

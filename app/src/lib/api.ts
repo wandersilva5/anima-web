@@ -28,6 +28,10 @@ export class ApiError extends Error {
   }
 }
 
+// Prefixo do app ('' na raiz, '/anima' em producao): todas as rotas passam por aqui,
+// entao nenhuma chamada usa caminho absoluto contra a raiz do dominio.
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) {
@@ -37,7 +41,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set('X-CSRF-Token', csrf);
   }
 
-  const response = await fetch(path, { ...init, headers, credentials: 'same-origin' });
+  const response = await fetch(`${BASE}${path}`, { ...init, headers, credentials: 'same-origin' });
   const text = await response.text();
   let data: unknown = null;
   if (text) {

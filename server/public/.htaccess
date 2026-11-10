@@ -24,11 +24,13 @@ AddType application/manifest+json .webmanifest
   # ao site, ele fica em /anima e este bloco impede servir ou executar esses arquivos.
   RewriteRule ^(anima|app|db|storage|vendor)/ - [F,L,NC]
 
-  # Midias: nada de estatico direto. Tudo passa pelo front controller, que exige
-  # sessao antes de entregar a imagem (galeria privada).
-  RewriteRule ^media(/|$) index.php [L,QSA]
+  # Midias: servidas diretamente pelo Apache. O .htaccess dentro de media/
+  # cuida de cache e seguranca. Antes passava pelo PHP (exigia sessao), mas
+  # isso gerava problemas no InfinityFree e sobrecarregava o PHP.
+  # A protecao da galeria continua pelo login na SPA + API.
+  # RewriteRule ^media(/|$) index.php [L,QSA]
 
-  # Arquivos e pastas existentes sao servidos direto (assets, icones, manifest...)
+  # Arquivos e pastas existentes sao servidos direto (assets, icones, manifest, media...)
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]

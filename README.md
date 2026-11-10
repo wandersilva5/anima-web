@@ -3,7 +3,7 @@
 Galeria privada para as imagens geradas pelo **Anima** (app local em Electron). O acervo fica no
 servidor, protegido por login, e é alimentado por um painel de sincronização que roda no seu PC.
 
-- Produção: https://femipro.trustchoicereviews.com
+- Produção: https://wsengenhariadigital.com.br/anima (instalação em subpasta `/anima`)
 - Modelo: uma galeria por instalação, com usuário administrador único (sem cadastro público).
 
 ---

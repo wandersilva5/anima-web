@@ -2,7 +2,7 @@
 rem ===========================================================================
 rem  Publica o app (frontend compilado + backend PHP) em producao.
 rem  Antes de usar, preencha "user" (e opcionalmente "password") do FTP em
-rem  tools\deploy.config.json  (hPanel > Arquivos > Contas FTP).
+rem  tools\deploy.config.json (painel do provedor > conta FTP).
 rem ===========================================================================
 setlocal EnableExtensions
 title Anima - publicar em producao
@@ -11,7 +11,7 @@ cd /d "%~dp0"
 if not exist "tools\deploy.config.json" goto sem_config
 
 echo.
-echo   Destino .... https://femipro.trustchoicereviews.com
+echo   Destino .... https://wsengenhariadigital.com.br/anima
 echo   Enviando o frontend compilado e o backend PHP por FTPS.
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\deploy.ps1" -Build

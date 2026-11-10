@@ -3,13 +3,15 @@ import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../lib/api';
+import { ImportTab } from '../components/Importador';
 import { copyText, formatBytes, formatDateTime, formatNumber } from '../lib/format';
 import type { AdminTag, Stats, TrashItem, UploadRow } from '../lib/types';
 
-type Tab = 'painel' | 'lixeira' | 'tags' | 'uploads' | 'acesso';
+type Tab = 'painel' | 'importar' | 'lixeira' | 'tags' | 'uploads' | 'acesso';
 
-const TABS: { key: Tab; label: string; icon: 'settings' | 'trash' | 'tag' | 'upload' | 'lock' }[] = [
+const TABS: { key: Tab; label: string; icon: 'settings' | 'sync' | 'trash' | 'tag' | 'upload' | 'lock' }[] = [
   { key: 'painel', label: 'Painel', icon: 'settings' },
+  { key: 'importar', label: 'Importar', icon: 'sync' },
   { key: 'lixeira', label: 'Lixeira', icon: 'trash' },
   { key: 'tags', label: 'Tags', icon: 'tag' },
   { key: 'uploads', label: 'Envios', icon: 'upload' },
@@ -56,6 +58,7 @@ export default function Admin() {
       </div>
 
       {tab === 'painel' && <PanelTab />}
+      {tab === 'importar' && <ImportTab />}
       {tab === 'lixeira' && <TrashTab />}
       {tab === 'tags' && <TagsTab />}
       {tab === 'uploads' && <UploadsTab />}
@@ -176,7 +179,8 @@ function PanelTab() {
         <div>
           <h2 className="text-sm font-semibold">Sincronização</h2>
           <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-            Use este token no app <span className="text-zinc-300">Anima Gallery Sync</span>. Ele não dá acesso ao painel.
+            Token de envio de imagens — use-o na aba <span className="text-zinc-300">Importar</span>. Ele não dá
+            acesso ao painel.
           </p>
         </div>
 
@@ -201,9 +205,9 @@ function PanelTab() {
         </button>
 
         <ol className="space-y-1 text-[11px] leading-relaxed text-zinc-500">
-          <li>1. Abra o app no PC e cole a URL do site e o token.</li>
-          <li>2. Toque em Sincronizar — só as imagens novas sobem.</li>
-          <li>3. As exclusões da lixeira aparecem no app para confirmar.</li>
+          <li>1. Copie o token e abra a aba Importar.</li>
+          <li>2. Escolha a pasta history e inicie — só sobe o que falta, e dá para retomar.</li>
+          <li>3. Nesta hospedagem o app desktop é barrado; o envio é feito pelo navegador.</li>
         </ol>
 
         {stats?.last_upload && (

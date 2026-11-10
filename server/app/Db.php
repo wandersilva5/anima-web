@@ -64,19 +64,44 @@ final class Db
         return (int) self::pdo()->lastInsertId();
     }
 
-    public static function transaction(callable $fn): mixed
+    /**
+     * Executa uma transacao com retry automatico em caso de deadlock (SQLSTATE 40001).
+     * O MySQL pode retornar deadlock quando uploads concorrentes disputam locks nas
+     * tabelas models, loras e tags. Ate 5 tentativas com backoff + jitter aleatorio.
+     */
+    public static function transaction(callable $fn, int $maxRetries = 5): mixed
     {
-        $pdo = self::pdo();
-        $pdo->beginTransaction();
-        try {
-            $result = $fn($pdo);
-            $pdo->commit();
-            return $result;
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
+        $attempt = 0;
+        while (true) {
+            $pdo = self::pdo();
+            $pdo->beginTransaction();
+            try {
+                $result = $fn($pdo);
+                $pdo->commit();
+                return $result;
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                // SQLSTATE 40001 = Serialization failure (deadlock)
+                $isDeadlock = $e->getCode() === '40001'
+                    || str_contains($e->getMessage(), '1213 Deadlock');
+                if ($isDeadlock && $attempt < $maxRetries - 1) {
+                    $attempt++;
+                    app_log('warn', 'Deadlock detectado, tentativa ' . ($attempt + 1) . '/' . $maxRetries, [
+                        'sql_state' => $e->getCode(),
+                    ]);
+                    // backoff com jitter: 50-200ms, 100-400ms, ... evita reconexao em massa
+                    usleep(random_int(50_000, 200_000) * $attempt);
+                    continue;
+                }
+                throw $e;
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e;
             }
-            throw $e;
         }
     }
 }

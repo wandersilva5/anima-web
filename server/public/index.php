@@ -101,8 +101,9 @@ $router->add('GET', '#^/api/health$#', static function (): void {
 });
 
 // ---------------------------------------------------------------- midias
-// Nada em media/ e servido como arquivo estatico: o .htaccess manda /media/*
-// para ca e a sessao e exigida antes de entregar a imagem.
+// Em producao o Apache serve os arquivos diretamente (sem PHP).
+// Essa rota so e usada pelo servidor embutido (php -S) no dev local;
+// mantemos a autenticacao para proteger durante o desenvolvimento.
 $router->add('GET', '#^/media/(?P<path>.+)$#', static function (array $params): void {
     Auth::requireUser();
     Media::stream((string) $params['path']);
@@ -323,6 +324,40 @@ $router->add('GET', '#^/api/admin/uploads$#', static function (): void {
 $router->add('POST', '#^/api/admin/sync-token$#', static function (): void {
     $token = Auth::rotateSyncToken();
     Http::json(['token' => $token]);
+});
+
+$router->add('GET', '#^/api/admin/check-media$#', static function (): void {
+    Auth::requireUser();
+    $rows = Db::all(
+        'SELECT uuid, path_orig, path_disp, path_thumb, sha256
+           FROM images WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 500'
+    );
+    $missing = [];
+    $ok = 0;
+    foreach ($rows as $row) {
+        $problems = [];
+        if (!is_file(Config::mediaPath($row['path_orig']))) {
+            $problems[] = 'orig';
+        }
+        if ($row['path_disp'] !== $row['path_orig'] && !is_file(Config::mediaPath($row['path_disp']))) {
+            $problems[] = 'disp';
+        }
+        if (!is_file(Config::mediaPath($row['path_thumb']))) {
+            $problems[] = 'thumb';
+        }
+        if ($problems !== []) {
+            $missing[] = ['uuid' => $row['uuid'], 'missing' => $problems];
+        } else {
+            $ok++;
+        }
+    }
+    Http::json([
+        'total' => count($rows),
+        'ok' => $ok,
+        'broken' => count($missing),
+        'media_dir' => Config::mediaPath(),
+        'items' => array_slice($missing, 0, 50),
+    ]);
 });
 
 $router->add('GET', '#^/api/admin/settings$#', static function (): void {

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Envia a galeria (frontend compilado + backend PHP) para a Hostinger por FTP/FTPS.
+    Envia a galeria (frontend compilado + backend PHP) por FTP/FTPS.
 
 .DESCRIPTION
     Mapeamento usado:
@@ -14,7 +14,8 @@
     So sobe arquivos cujo SHA-256 mudou desde o ultimo deploy (estado em tools/.deploy-state.json).
 
 .PARAMETER DryRun
-    Lista o que seria enviado, sem conectar.
+    Conecta no FTP, valida o layout (pasta da raiz) e lista o que seria enviado,
+    sem enviar nada.
 
 .PARAMETER UploadEnv
     Inclui o server/.env no envio (por padrao ele nunca e tocado).
@@ -166,17 +167,6 @@ foreach ($item in $map) {
 
 Write-Host ("{0} arquivo(s) local(is); {1} para enviar ({2:N1} MB)." -f $map.Count, $todo.Count, ($totalBytes / 1MB)) -ForegroundColor Cyan
 
-if ($DryRun) {
-    foreach ($item in $todo) { Write-Host "  + $($item.Remote)" }
-    Write-Host 'Dry-run: nada foi enviado.' -ForegroundColor Yellow
-    exit 0
-}
-
-if ($todo.Count -eq 0) {
-    Write-Host 'Tudo sincronizado — nada a enviar.' -ForegroundColor Green
-    exit 0
-}
-
 # ---------------------------------------------------------------------- FTP
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -184,8 +174,8 @@ $credentials = New-Object System.Net.NetworkCredential($config.user, $config.pas
 $knownDirs = New-Object System.Collections.Generic.HashSet[string]
 
 if ($config.tls) {
-    # O servidor FTP da Hostinger apresenta o certificado *.hstgr.io, que nunca casa
-    # com o nome do nosso dominio. Aceita esse caso (nome diferente), mas nao aceita
+    # Hosts de FTP costumam apresentar certificado do proprio servidor (que nao casa
+    # com o nome da conta). Aceita esse caso (nome diferente), mas nao aceita
     # cadeia invalida/expirada.
     [Net.ServicePointManager]::ServerCertificateValidationCallback = {
         param($sender, $cert, $chain, $errors)
@@ -298,6 +288,31 @@ foreach ($remoteBase in @($remotePublic)) {
     }
 }
 
+# O remotePublic inteiro precisa existir: se nao existir, os MKD daqui criariam
+# diretorios mortos (fora do que o servidor web atende) e o site ficaria invisivel.
+if ($remotePublic -ne '') {
+    try {
+        $probePublic = New-FtpRequest -Path $remotePublic -Method ([System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails)
+        $probeResponse = $probePublic.GetResponse()
+        $probeResponse.Close()
+    } catch {
+        Write-Host "A pasta '$remotePublic' nao existe nesta conta FTP." -ForegroundColor Red
+        Write-Host "  Confira remotePublic no deploy.config.json. Raiz da conta: $($rootNames -join ', ')" -ForegroundColor Yellow
+        exit 1
+    }
+}
+
+if ($DryRun) {
+    foreach ($item in $todo) { Write-Host "  + $($item.Remote)" }
+    Write-Host 'Dry-run: conexao e layout validados; nada foi enviado.' -ForegroundColor Yellow
+    exit 0
+}
+
+if ($todo.Count -eq 0) {
+    Write-Host 'Tudo sincronizado — nada a enviar.' -ForegroundColor Green
+    exit 0
+}
+
 foreach ($item in $todo) {
     $index++
     $label = '{0,4}/{1}  {2}' -f $index, $todo.Count, $item.Remote
@@ -325,15 +340,15 @@ if ($failed -gt 0) {
 
 Write-Host @"
 
-Lembretes pos-deploy em https://femipro.trustchoicereviews.com :
-  1. Codigo privado em '/anima' (dentro do docroot, bloqueado pelo .htaccess) ou fora
-     do webroot quando a conta FTP tem acesso a pasta acima de public_html.
-  2. Crie $remotePrivate/.env a partir de server/.env.example (rode com -UploadEnv).
-     Caminhos ABSOLUTOS no servidor (o FTP ve outra raiz):
-       STORAGE_DIR=/home/USUARIO/domains/femipro.trustchoicereviews.com/public_html/anima/storage
-       MEDIA_DIR=/home/USUARIO/domains/femipro.trustchoicereviews.com/public_html/media
-  3. Primeira instalacao (SSH):
-       php /home/USUARIO/domains/femipro.trustchoicereviews.com/public_html/anima/app/cli/migrate.php
+Lembretes pos-deploy em https://wsengenhariadigital.com.br/anima :
+  1. Codigo privado em $remotePrivate (fora do docroot quando a conta FTP tem
+     acesso a pasta acima de public_html; dentro do docroot, bloqueado pelo .htaccess).
+  2. Confirme $remotePrivate/.env no servidor (rode com -UploadEnv). Caminhos
+     ABSOLUTOS no servidor (o FTP ve outra raiz):
+       STORAGE_DIR=<caminho absoluto>/anima/storage
+       MEDIA_DIR=<caminho absoluto>/public_html/anima/media
+  3. Primeira instalacao sem SSH: suba o arquivo de setup temporario
+     (Anexo do MIGRAR-HOSPEDAGEM.md), rode uma vez, guarde o SYNC_TOKEN e apague.
   4. Confirme que $remotePublic/media existe e aceita escrita (0755).
-  5. Gere o SYNC_TOKEN em Admin > Painel e cole no painel local.
+  5. Cole o SYNC_TOKEN no painel local (painel.bat).
 "@

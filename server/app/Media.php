@@ -2,11 +2,19 @@
 declare(strict_types=1);
 
 /**
- * Armazenamento das imagens: original + derivadas (display e thumbnail).
+ * Armazenamento das imagens: master otimizado + derivadas.
  * Layout: media/{o,d,t}/aa/bb/<sha256>.<ext>
+ *
+ * O master (o/) e gravado com no maximo MASTER_MAXpx em WebP: a otimizacao
+ * acontece na hora do upload, para caber na cota de disco do hosting (as
+ * originais em resolucao completa continuam apenas no PC de origem).
+ * O display (d/) so recebe arquivo quando o master ultrapassa DISPLAY_MAX;
+ * caso contrario path_disp aponta para o proprio master e nada e duplicado.
  */
 final class Media
 {
+    public const MASTER_MAX = 1024;
+    public const MASTER_QUALITY = 86;
     public const DISPLAY_MAX = 1440;
     public const THUMB_MAX = 480;
     public const WEBP_QUALITY = 82;
@@ -100,22 +108,66 @@ final class Media
         return ['width' => $width, 'height' => $height];
     }
 
+    /**
+     * Grava o master ja otimizado: redimensiona para MASTER_MAX e regrava em
+     * WebP (fallback JPEG/PNG quando o GD nao tem WebP). WebP ja dentro do
+     * limite e arquivado sem reencode. Retorna o caminho relativo final.
+     */
     public static function storeOriginal(string $tmpPath, string $sha, string $ext = 'png'): string
     {
-        $relative = 'o/' . self::shard($sha) . '/' . $sha . '.' . $ext;
-        $target = self::absolute($relative);
-        Config::ensureDir(dirname($target));
-        if (!is_file($target)) {
-            if (!move_uploaded_file($tmpPath, $target)) {
-                // fallback para CLI/importacao local
-                if (!@copy($tmpPath, $target)) {
+        $base = 'o/' . self::shard($sha) . '/';
+        $outExt = $ext;
+        $encoded = false;
+
+        $info = @getimagesize($tmpPath);
+        if ($info !== false) {
+            $side = max((int) $info[0], (int) $info[1]);
+            $type = (int) $info[2];
+
+            if (
+                $type === IMAGETYPE_WEBP
+                && $side <= self::MASTER_MAX
+                && function_exists('imagecreatefromwebp')
+            ) {
+                $outExt = 'webp';
+            } else {
+                $image = self::load($tmpPath, $type);
+                if ($image !== null) {
+                    if ($side > self::MASTER_MAX) {
+                        $smaller = self::resize($image, self::MASTER_MAX);
+                        imagedestroy($image);
+                        $image = $smaller;
+                    }
+                    $outExt = function_exists('imagewebp')
+                        ? 'webp'
+                        : ($type === IMAGETYPE_JPEG ? 'jpg' : 'png');
+                    self::save(
+                        $image,
+                        self::absolute($base . $sha . '.' . $outExt),
+                        $outExt === 'webp' ? self::MASTER_QUALITY : 92,
+                        $outExt,
+                    );
+                    imagedestroy($image);
+                    $encoded = true;
+                }
+            }
+        }
+
+        $relative = $base . $sha . '.' . $outExt;
+        if (!$encoded) {
+            // Ja otimizado (WebP no limite) ou GD nao le o formato: grava como chegou.
+            $target = self::absolute($relative);
+            Config::ensureDir(dirname($target));
+            if (!is_file($target)) {
+                if (!move_uploaded_file($tmpPath, $target) && !@copy($tmpPath, $target)) {
                     throw new RuntimeException('Falha ao gravar o arquivo original.');
                 }
-                @unlink($tmpPath);
             }
-        } elseif (is_file($tmpPath)) {
+        }
+        if (is_file($tmpPath)) {
             @unlink($tmpPath);
         }
+        @chmod(self::absolute($relative), 0644);
         return $relative;
     }
 
@@ -139,12 +191,17 @@ final class Media
         }
 
         $ext = function_exists('imagewebp') ? 'webp' : 'jpg';
-        $dispRelative = 'd/' . self::shard($sha) . '/' . $sha . '.' . $ext;
         $thumbRelative = 't/' . self::shard($sha) . '/' . $sha . '.' . $ext;
 
-        $disp = self::resize($image, self::DISPLAY_MAX);
-        self::save($disp, self::absolute($dispRelative), self::WEBP_QUALITY, $ext);
-        imagedestroy($disp);
+        // Display compartilhado: se o master ja cabe em DISPLAY_MAX, o banco
+        // aponta path_disp para o proprio original e nao nasce arquivo em d/.
+        $dispRelative = $origRelative;
+        if (max($width, $height) > self::DISPLAY_MAX) {
+            $dispRelative = 'd/' . self::shard($sha) . '/' . $sha . '.' . $ext;
+            $disp = self::resize($image, self::DISPLAY_MAX);
+            self::save($disp, self::absolute($dispRelative), self::WEBP_QUALITY, $ext);
+            imagedestroy($disp);
+        }
 
         $thumb = self::resize($image, self::THUMB_MAX);
         self::save($thumb, self::absolute($thumbRelative), self::THUMB_QUALITY, $ext);
@@ -188,9 +245,11 @@ final class Media
     private static function save(GdImage $image, string $target, int $quality, string $ext): void
     {
         Config::ensureDir(dirname($target));
-        $ok = $ext === 'webp'
-            ? imagewebp($image, $target, $quality)
-            : imagejpeg($image, $target, $quality);
+        $ok = match ($ext) {
+            'webp' => imagewebp($image, $target, $quality),
+            'png' => imagepng($image, $target, 6),
+            default => imagejpeg($image, $target, $quality),
+        };
         if (!$ok) {
             throw new RuntimeException('Falha ao gravar a derivada: ' . basename($target));
         }

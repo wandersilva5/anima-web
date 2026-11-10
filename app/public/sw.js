@@ -1,7 +1,11 @@
 /* Service worker minimo: cache do shell e das miniaturas ja visitadas. */
-const SHELL = 'anima-shell-v1';
-const MEDIA = 'anima-media-v1';
-const SHELL_FILES = ['/', '/manifest.webmanifest'];
+const SHELL = 'anima-shell-v2';
+const MEDIA = 'anima-media-v2';
+
+// Raiz do app ('/' localmente, '/anima/' em producao): o escopo do proprio
+// registration ja entrega o prefixo certo, entao nada aqui e fixo na raiz do dominio.
+const BASE = new URL(self.registration.scope).pathname;
+const SHELL_FILES = [BASE, `${BASE}manifest.webmanifest`];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(SHELL_FILES)).catch(() => undefined));
@@ -25,7 +29,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Miniaturas: cache-first (conteudo imutavel por hash)
-  if (url.pathname.startsWith('/media/')) {
+  if (url.pathname.startsWith(`${BASE}media/`)) {
     event.respondWith(
       caches.open(MEDIA).then(async (cache) => {
         const hit = await cache.match(request);
@@ -44,10 +48,10 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(SHELL).then((cache) => cache.put('/', copy)).catch(() => undefined);
+          caches.open(SHELL).then((cache) => cache.put(BASE, copy)).catch(() => undefined);
           return response;
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match(BASE)),
     );
   }
 });

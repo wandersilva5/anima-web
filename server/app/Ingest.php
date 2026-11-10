@@ -76,12 +76,14 @@ final class Ingest
         }
 
         $origRelative = Media::storeOriginal($tmp, $sha, $ext);
+        // bytes do arquivo realmente gravado (o master pode ter sido otimizado)
+        $storedBytes = (int) @filesize(Media::absolute($origRelative));
         $derived = Media::derive($origRelative, $sha);
 
         $filename = basename((string) ($metadata['images'][0]['filename'] ?? ($uuid . '.' . $ext)));
 
-        $imageId = Db::transaction(static function () use (
-            $uuid, $filename, $sha, $size, $derived, $origRelative, $prompt, $negative,
+        $imageId = self::ingestTransaction(static function () use (
+            $uuid, $filename, $sha, $storedBytes, $derived, $origRelative, $prompt, $negative,
             $params, $metadata, $tsMs
         ): int {
             $modelName = trim((string) ($params['modelName'] ?? ''));
@@ -106,7 +108,7 @@ final class Ingest
                     $uuid,
                     mb_substr($filename, 0, 160),
                     $sha,
-                    $size,
+                    $storedBytes,
                     $derived['width'],
                     $derived['height'],
                     $origRelative,
@@ -166,9 +168,47 @@ final class Ingest
             'sha256' => $sha,
             'width' => $derived['width'],
             'height' => $derived['height'],
-            'bytes' => $size,
+            'bytes' => $storedBytes,
             'tags' => (int) Db::value('SELECT COUNT(*) FROM image_tags WHERE image_id = ?', [$imageId], 0),
         ];
+    }
+
+    /**
+     * Serializa as transacoes de ingestao com um lock nomeado do MySQL (GET_LOCK).
+     *
+     * Sem isso, uploads concorrentes disputam locks em models/loras/tags e o MySQL
+     * pode retornar deadlock (SQLSTATE 40001) — que se esgota sob carga. Serializando
+     * apenas o trecho de banco, a decodificacao/resize continua em paralelo.
+     *
+     * Se o host nao permitir GET_LOCK, seguimos sem lock: o retry de Db::transaction
+     * (com backoff + jitter) continua como rede de seguranca.
+     */
+    private static function ingestTransaction(callable $fn): mixed
+    {
+        $lockName = 'anima_ingest';
+        $holdsLock = false;
+
+        try {
+            $state = Db::value('SELECT GET_LOCK(?, 30)', [$lockName]);
+            if ($state !== null && (int) $state === 0) {
+                Http::error('busy', 'Servidor ocupado com outra importacao. Tente novamente.', 503);
+            }
+            $holdsLock = ((int) $state === 1);
+        } catch (Throwable) {
+            $holdsLock = false; // GET_LOCK indisponivel neste host
+        }
+
+        try {
+            return Db::transaction($fn);
+        } finally {
+            if ($holdsLock) {
+                try {
+                    Db::run('SELECT RELEASE_LOCK(?)', [$lockName]);
+                } catch (Throwable) {
+                    // o lock cai quando a conexao fecha
+                }
+            }
+        }
     }
 
     private static function log(?int $imageId, string $uuid, int $bytes, float $startedAt, string $action): void
