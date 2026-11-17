@@ -37,6 +37,7 @@ export default function Gallery({ forceFavorites = false }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [searchText, setSearchText] = useState(filters.q ?? '');
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const loadingMoreRef = useRef(false);
   const blockedRef = useRef(false);
@@ -148,9 +149,32 @@ export default function Gallery({ forceFavorites = false }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.q]);
 
+  useEffect(() => {
+    const id = sessionStorage.getItem('anima_last_viewed');
+    if (id) {
+      setSelectedUuid(id);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedUuid) return;
+    const el = document.querySelector<HTMLElement>(`[data-uuid="${selectedUuid}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+  }, [selectedUuid]);
+
   const activeCount = activeFilterCount(filters);
   const blurred = (me?.settings.privacy_blur ?? false) && !revealed;
   const selectedTags = filters.tags.map((id) => ({ id, label: tagLabels[id] ?? `#${id}` }));
+
+  const handleDelete = async (uuid: string) => {
+    try {
+      await api.softDelete(uuid);
+      setItems((prev) => prev.filter((item) => item.uuid !== uuid));
+      setTotal((t) => Math.max(0, t - 1));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel excluir a imagem.');
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -314,7 +338,7 @@ export default function Gallery({ forceFavorites = false }: Props) {
           )}
         </div>
       ) : (
-        <ImageGrid items={items} query={query} blurred={blurred} onReveal={() => setRevealed(true)} />
+        <ImageGrid items={items} query={query} blurred={blurred} onReveal={() => setRevealed(true)} selectedUuid={selectedUuid} onDelete={handleDelete} />
       )}
 
       <div ref={sentinel} className="h-10" />

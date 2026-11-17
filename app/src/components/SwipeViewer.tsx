@@ -174,38 +174,40 @@ export default function SwipeViewer({ src, alt, onPrev, onNext, onClose, onTap }
       return;
     }
 
-    if (g.mode === 'drag') {
-      const now = Date.now();
+    const now = Date.now();
 
-      if (!g.moved) {
-        const isDoubleTap = now - g.lastTap < 300 && Math.hypot(event.clientX - g.lastTapX, event.clientY - g.lastTapY) < 26;
-        if (isDoubleTap) {
-          g.lastTap = 0;
-          if (t.scale > 1.02) {
-            reset(true);
-          } else {
-            const rect = stageRef.current?.getBoundingClientRect();
-            t.scale = 2.5;
-            if (rect) {
-              const cx = event.clientX - (rect.left + rect.width / 2);
-              const cy = event.clientY - (rect.top + rect.height / 2);
-              t.x = -cx * 1.5;
-              t.y = -cy * 1.5;
-              clampPan();
-            }
-            apply(true);
+    // Toque duplo: alterna entre zoom in e zoom out, tanto no modo arrasto
+    // (sem zoom) quanto no modo deslocamento (ja zoomado).
+    if (!g.moved && (g.mode === 'drag' || g.mode === 'pan')) {
+      const isDoubleTap = now - g.lastTap < 300 && Math.hypot(event.clientX - g.lastTapX, event.clientY - g.lastTapY) < 26;
+      if (isDoubleTap) {
+        g.lastTap = 0;
+        if (t.scale > 1.02) {
+          reset(true);
+        } else {
+          const rect = stageRef.current?.getBoundingClientRect();
+          t.scale = 2.5;
+          if (rect) {
+            const cx = event.clientX - (rect.left + rect.width / 2);
+            const cy = event.clientY - (rect.top + rect.height / 2);
+            t.x = -cx * 1.5;
+            t.y = -cy * 1.5;
+            clampPan();
           }
-          g.mode = 'idle';
-          return;
+          apply(true);
         }
-        g.lastTap = now;
-        g.lastTapX = event.clientX;
-        g.lastTapY = event.clientY;
-        onTap?.();
         g.mode = 'idle';
         return;
       }
+      g.lastTap = now;
+      g.lastTapX = event.clientX;
+      g.lastTapY = event.clientY;
+      onTap?.();
+      g.mode = 'idle';
+      return;
+    }
 
+    if (g.mode === 'drag') {
       const dx = event.clientX - g.startX;
       const dy = event.clientY - g.startY;
 

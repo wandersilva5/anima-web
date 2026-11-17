@@ -44,9 +44,10 @@ export default function Viewer() {
   );
 
   const back = useCallback(() => {
+    if (detail) sessionStorage.setItem('anima_last_viewed', detail.uuid);
     const search = query ? `?${query}` : '';
     navigate({ pathname: favoritesContext ? '/favoritos' : '/', search }, { replace: true });
-  }, [favoritesContext, navigate, query]);
+  }, [favoritesContext, navigate, query, detail]);
 
   useEffect(() => {
     if (!uuid) return;
@@ -60,6 +61,7 @@ export default function Viewer() {
 
     const cached = cache.current.get(uuid);
     setDetail(cached ?? null);
+    sessionStorage.setItem('anima_last_viewed', uuid);
 
     api
       .image(uuid, query, !cached)
