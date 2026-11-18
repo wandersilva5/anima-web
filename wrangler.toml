@@ -1,7 +1,6 @@
 name = "wsengenhariadigital-com-br"
-type = "pages"
-production = true
-build.command = "cd app && npm run build"
-build.output-directory = "server/public"
-[env.production]
-project_name = "wsengenhariadigital-com-br"
+compatibility_date = "2026-11-17"
+
+[build]
+command = "cd app && npm run build"
+output-directory = "server/public"
