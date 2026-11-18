@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
     build: {
       // O build cai direto no docroot do PHP (server/public)
       outDir: '../server/public',
-      emptyOutDir: false,
+      emptyOutDir: true,
       assetsDir: 'assets',
       sourcemap: false,
     },
