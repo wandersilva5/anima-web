@@ -1,0 +1,6 @@
+name = "wsengenhariadigital-com-br"
+compatibility_date = "2026-11-17"
+pages_build_output_dir = "server/public"
+
+[build]
+command = "cd app && npm run build"
