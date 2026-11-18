@@ -6,7 +6,7 @@ servidor, protegido por login, e é alimentado por um painel de sincronização 
 - Produção: https://wsengenhariadigital.com.br/anima (instalação em subpasta `/anima`)
 - Modelo: uma galeria por instalação, com usuário administrador único (sem cadastro público).
 
----
+--- 
 
 ## Como está dividido
 
