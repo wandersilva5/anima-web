@@ -2,4 +2,4 @@ name = "anima-web"
 compatibility_date = "2026-11-17"
 
 [assets]
-directory = "server/public_build"
+directory = "server/public"
