@@ -9,7 +9,7 @@ import { pool, retry } from './queue';
 import { scan, isUuid } from './scanner';
 import { StateStore } from './state';
 import { moveToTrash } from './trash';
-import type { DeletionItem, LocalPreview, Progress, SyncConfig, SyncStats, SyncSummary } from './types';
+import type { DeletionItem, LocalPreview, Progress, ScanItem, SyncConfig, SyncStats, SyncSummary } from './types';
 
 const PLAN_BATCH = 400;
 const STATE_FLUSH_EVERY = 25;
