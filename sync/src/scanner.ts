@@ -3,7 +3,7 @@ import { extname, join } from 'node:path';
 import type { ScanItem } from './types';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 
 export function isUuid(value: string): boolean {
   return UUID_RE.test(value);
@@ -12,11 +12,15 @@ export function isUuid(value: string): boolean {
 /**
  * Le a pasta `history` e devolve as geracoes validas (metadata.json + imagem).
  * Pastas `.thumbs`, arquivos soltos e pastas fora do padrao UUID sao ignoradas.
+ *
+ * Quando `gifOnly` é true, apenas pastas contendo um arquivo .gif sao consideradas,
+ * permitindo usar uma pasta dedicada (gifDir) separada da history principal.
  */
 export async function scan(
   historyDir: string,
   onProgress: (scanned: number) => void,
   shouldStop: () => boolean,
+  gifOnly = false,
 ): Promise<ScanItem[]> {
   const entries = await fs.readdir(historyDir, { withFileTypes: true });
   const folders = entries.filter((entry) => entry.isDirectory() && isUuid(entry.name)).map((entry) => entry.name);
@@ -35,7 +39,12 @@ export async function scan(
       const hasMetadata = files.some((file) => file.isFile() && file.name === 'metadata.json');
       if (!hasMetadata) continue;
 
-      const image = files.find((file) => file.isFile() && IMAGE_EXTENSIONS.has(extname(file.name).toLowerCase()));
+      const image = files.find(
+        (file) =>
+          file.isFile() &&
+          IMAGE_EXTENSIONS.has(extname(file.name).toLowerCase()) &&
+          (!gifOnly || extname(file.name).toLowerCase() === '.gif'),
+      );
       if (!image) continue;
 
       const metadataPath = join(folderPath, 'metadata.json');

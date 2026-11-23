@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useRef } from 'react';
 import type { ImageItem } from '../lib/types';
 import { Icon } from './Icon';
+import { isGif } from '../lib/format';
 
 interface Props {
   items: ImageItem[];
@@ -32,6 +33,8 @@ export default function ImageGrid({ items, query, blurred, onReveal, selectedUui
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {items.map((item) => {
         const isSelected = item.uuid === selectedUuid;
+        const gif = isGif(item.thumb);
+        const coverClass = gif ? 'object-contain' : 'object-cover';
         return (
           <div key={item.uuid} className="relative" data-uuid={item.uuid} ref={(el) => el && itemRefs.current.set(item.uuid, el)}>
             <Link
@@ -47,10 +50,13 @@ export default function ImageGrid({ items, query, blurred, onReveal, selectedUui
                   decoding="async"
                   width={item.width}
                   height={item.height}
-                  className={`h-full w-full object-cover transition duration-300 ${
-                    blurred ? 'scale-110 blur-2xl' : 'blur-0'
-                  } ${isSelected ? 'ring-2 ring-accent' : ''}`}
+                  className={`h-full w-full transition duration-300 ${coverClass} ${blurred ? 'scale-110 blur-2xl' : 'blur-0'} ${isSelected ? 'ring-2 ring-accent' : ''}`}
                 />
+                {gif && (
+                  <span className="absolute left-1 top-1 z-10 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                    GIF
+                  </span>
+                )}
               </div>
             </Link>
 

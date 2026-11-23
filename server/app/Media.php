@@ -124,7 +124,29 @@ final class Media
             $side = max((int) $info[0], (int) $info[1]);
             $type = (int) $info[2];
 
-            if (
+            // GIF animado: nunca reencodar (perderia a animacao).
+            // Se estiver dentro do limite, copia como esta. Se exceder, reduz mantendo .gif.
+            if ($type === IMAGETYPE_GIF) {
+                if ($side <= self::MASTER_MAX) {
+                    $outExt = 'gif';
+                } else {
+                    $image = self::load($tmpPath, $type);
+                    if ($image !== null) {
+                        $smaller = self::resize($image, self::MASTER_MAX);
+                        imagedestroy($image);
+                        $image = $smaller;
+                        $outExt = 'gif';
+                        self::save(
+                            $image,
+                            self::absolute($base . $sha . '.' . $outExt),
+                            self::MASTER_QUALITY,
+                            $outExt,
+                        );
+                        imagedestroy($image);
+                        $encoded = true;
+                    }
+                }
+            } elseif (
                 $type === IMAGETYPE_WEBP
                 && $side <= self::MASTER_MAX
                 && function_exists('imagecreatefromwebp')

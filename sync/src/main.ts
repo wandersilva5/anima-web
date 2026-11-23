@@ -77,6 +77,9 @@ function requireConfig(): SyncConfig {
   if (!config.historyDir || !existsSync(config.historyDir)) {
     throw new Error(`Pasta history nao encontrada: ${config.historyDir}`);
   }
+  if (config.gifDir && config.gifDir !== config.historyDir && !existsSync(config.gifDir)) {
+    throw new Error(`Pasta de GIFs nao encontrada: ${config.gifDir}`);
+  }
   return config;
 }
 
@@ -101,6 +104,7 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
   let hashed = 0;
 
   try {
+    // 1) Varre a pasta history principal (todos os tipos: png, jpg, webp, gif).
     log(`Varrendo ${config.historyDir}`);
     emit(emptyProgress('scan', 'Varrendo a pasta history…'));
     const items = await scan(
@@ -112,19 +116,37 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
       () => cancelRequested,
     );
 
+    // 2) Se houver uma pasta dedicada a GIFs (diferente da history), varre apenas GIFs dela.
+    let gifItems: ScanItem[] = [];
+    if (config.gifDir && config.gifDir !== config.historyDir && existsSync(config.gifDir)) {
+      log(`Varrendo ${config.gifDir} (apenas GIFs)`);
+      emit(emptyProgress('scan', 'Varrendo a pasta de GIFs…'));
+      gifItems = await scan(
+        config.gifDir,
+        (count) => {
+          scanned += count;
+          emit({ ...emptyProgress('scan', 'Varrendo a pasta de GIFs…'), scanned });
+        },
+        () => cancelRequested,
+        true, // gifOnly
+      );
+    }
+
+    const allItems = [...items, ...gifItems];
+
     if (cancelRequested) {
       emit(emptyProgress('cancelled', 'Sincronizacao cancelada.'));
       return { scanned, changed: 0, missing: 0, uploaded: 0, failed: 0, bytes: 0, elapsedMs: Date.now() - startedAt };
     }
 
     // 1) Hasheia so quem e novo ou mudou desde o ultimo envio.
-    const byUuid = new Map(items.map((item) => [item.uuid, item]));
-    const changed = items.filter((item) => {
+    const byUuid = new Map(allItems.map((item) => [item.uuid, item]));
+    const changed = allItems.filter((item) => {
       const entry = state.get(item.uuid);
       if (!entry) return true;
       return entry.mtimeMs !== item.mtimeMs || entry.size !== item.size;
     });
-    log(`${items.length} geracoes encontradas, ${changed.length} novas ou alteradas.`);
+    log(`${allItems.length} geracoes encontradas, ${changed.length} novas ou alteradas.`);
 
     const hashes = new Map<string, string>();
 
@@ -141,7 +163,7 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
           log(`Falha ao ler ${item.imageName}: ${(error as Error).message}`, 'error');
         }
         hashed++;
-        emit({ ...emptyProgress('hash', 'Calculando verificacao (SHA-256)…'), scanned: items.length, hashed, total: changed.length });
+        emit({ ...emptyProgress('hash', 'Calculando verificacao (SHA-256)…'), scanned: allItems.length, hashed, total: changed.length });
       },
       () => cancelRequested,
     );
@@ -220,9 +242,9 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
             log(`Falha ao enviar ${item.uuid}: ${(error as Error).message}`, 'error');
           }
           done++;
-          emit({
-            ...emptyProgress('upload', `Enviando ${done}/${total}…`),
-            scanned: items.length,
+            emit({
+              ...emptyProgress('upload', `Enviando ${done}/${total}…`),
+              scanned: allItems.length,
             hashed: hashes.size,
             total,
             done,
@@ -239,7 +261,7 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
     state.flush();
 
     const summary: SyncSummary = {
-      scanned: items.length,
+      scanned: allItems.length,
       changed: changed.length,
       missing: total,
       uploaded,
@@ -253,7 +275,7 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
     } else {
       emit({
         ...emptyProgress('done', dryRun ? 'Simulacao concluida.' : 'Sincronizacao concluida.'),
-        scanned: items.length,
+        scanned: allItems.length,
         hashed: hashes.size,
         total,
         done,
@@ -263,7 +285,7 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
       });
       log(
         dryRun
-          ? `Simulacao: ${total} pendente(s) de ${items.length}.`
+          ? `Simulacao: ${total} pendente(s) de ${allItems.length}.`
           : `Concluido: ${uploaded} enviada(s), ${failed} falha(s).`,
       );
     }
@@ -328,7 +350,7 @@ async function fetchStats(): Promise<SyncStats & { latency_ms: number }> {
   return { ...stats, latency_ms: Date.now() - started };
 }
 
-/** Varre a pasta history e compara com o estado local do ultimo envio. */
+/** Varre a pasta history (e a pasta de GIFs, se configurada) e compara com o estado local do ultimo envio. */
 async function localPreview(): Promise<LocalPreview> {
   const config = loadConfig();
   if (!config.historyDir || !existsSync(config.historyDir)) {
@@ -338,10 +360,17 @@ async function localPreview(): Promise<LocalPreview> {
   const state = ensureState();
   const items = await scan(config.historyDir, () => undefined, () => false);
 
+  let gifItems: ScanItem[] = [];
+  if (config.gifDir && config.gifDir !== config.historyDir && existsSync(config.gifDir)) {
+    gifItems = await scan(config.gifDir, () => undefined, () => false, true);
+  }
+
+  const allItems = [...items, ...gifItems];
+
   let synced = 0;
   let changed = 0;
   let bytes = 0;
-  for (const item of items) {
+  for (const item of allItems) {
     const entry = state.get(item.uuid);
     if (entry && entry.size === item.size && entry.mtimeMs === item.mtimeMs) {
       synced++;
@@ -351,7 +380,7 @@ async function localPreview(): Promise<LocalPreview> {
     }
   }
 
-  return { local: items.length, synced, changed, bytes, lastSync: state.lastSync, stateCount: state.size };
+  return { local: allItems.length, synced, changed, bytes, lastSync: state.lastSync, stateCount: state.size };
 }
 
 // -------------------------------------------------------------------- janela
@@ -439,7 +468,7 @@ function registerIpc(): void {
     if (!existsSync(folder)) return null;
     try {
       const files = await fs.readdir(folder);
-      const image = files.find((name) => /\.(png|jpe?g|webp)$/i.test(name));
+      const image = files.find((name) => /\.(png|jpe?g|webp|gif)$/i.test(name));
       if (!image) return null;
       const bitmap = nativeImage.createFromPath(join(folder, image));
       if (bitmap.isEmpty()) return null;

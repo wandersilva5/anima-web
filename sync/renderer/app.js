@@ -264,6 +264,7 @@ function readForm() {
     baseUrl: $('fBase').value.trim(),
     token: $('fToken').value.trim(),
     historyDir: $('fHistory').value.trim(),
+    gifDir: $('fGifDir').value.trim(),
     trashDir: $('fTrash').value.trim(),
     concurrency: Math.min(6, Math.max(1, Math.round(Number($('fConcurrency').value) || 2))),
   };
@@ -273,6 +274,7 @@ function fillForm(config) {
   $('fBase').value = config.baseUrl || '';
   $('fToken').value = config.token || '';
   $('fHistory').value = config.historyDir || '';
+  $('fGifDir').value = config.gifDir || '';
   $('fTrash').value = config.trashDir || '';
   $('fConcurrency').value = config.concurrency || 2;
 }
@@ -328,6 +330,11 @@ function bindEvents() {
   $('bTrash').addEventListener('click', async () => {
     const chosen = await api.pickDir($('fTrash').value.trim());
     if (chosen) $('fTrash').value = chosen;
+  });
+
+  $('bGifDir').addEventListener('click', async () => {
+    const chosen = await api.pickDir($('fGifDir').value.trim());
+    if (chosen) $('fGifDir').value = chosen;
   });
 }
 

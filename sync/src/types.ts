@@ -3,6 +3,8 @@
 export interface SyncConfig {
   /** Pasta `history` do Anima (fonte da verdade). */
   historyDir: string;
+  /** Pasta dedicada apenas a GIFs (opcional). Se vazia, usa a mesma historyDir. */
+  gifDir: string;
   /** Para onde as pastas excluidas sao movidas (retencao local). */
   trashDir: string;
   /** URL do site, ex.: https://femipro.trustchoicereviews.com */

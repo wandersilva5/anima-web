@@ -4,11 +4,13 @@ import { dirname, join } from 'node:path';
 import type { SyncConfig } from './types';
 
 const DEFAULT_HISTORY = 'E:\\Anima2000\\anima-electron\\history';
+const DEFAULT_GIF_DIR = 'E:\\Anima2000\\anima-electron\\history-gifs';
 const DEFAULT_TRASH = 'E:\\Anima2000\\_trash';
 const DEFAULT_BASE_URL = 'https://femipro.trustchoicereviews.com/';
 
 interface StoredConfig {
   historyDir?: string;
+  gifDir?: string;
   trashDir?: string;
   baseUrl?: string;
   tokenCipher?: string;
@@ -23,6 +25,7 @@ function configPath(): string {
 export function defaultConfig(): SyncConfig {
   return {
     historyDir: DEFAULT_HISTORY,
+    gifDir: DEFAULT_GIF_DIR,
     trashDir: DEFAULT_TRASH,
     baseUrl: DEFAULT_BASE_URL,
     token: '',
@@ -47,6 +50,7 @@ export function loadConfig(): SyncConfig {
     }
     return {
       historyDir: stored.historyDir ?? fallback.historyDir,
+      gifDir: stored.gifDir ?? fallback.gifDir,
       trashDir: stored.trashDir ?? fallback.trashDir,
       baseUrl: stored.baseUrl ?? '',
       token,
@@ -60,6 +64,7 @@ export function loadConfig(): SyncConfig {
 export function saveConfig(config: SyncConfig): SyncConfig {
   const normalized: SyncConfig = {
     historyDir: config.historyDir.trim(),
+    gifDir: config.gifDir.trim(),
     trashDir: config.trashDir.trim(),
     baseUrl: normalizeUrl(config.baseUrl),
     token: config.token.trim(),
@@ -68,6 +73,7 @@ export function saveConfig(config: SyncConfig): SyncConfig {
 
   const stored: StoredConfig = {
     historyDir: normalized.historyDir,
+    gifDir: normalized.gifDir,
     trashDir: normalized.trashDir,
     baseUrl: normalized.baseUrl,
     concurrency: normalized.concurrency,
