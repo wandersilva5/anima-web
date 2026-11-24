@@ -19,6 +19,7 @@ export interface ScanItem {
   uuid: string;
   folderPath: string;
   metadataPath: string;
+  metadataContent?: string;
   imagePath: string;
   imageName: string;
   /** Maior mtime entre metadata.json e a imagem. */
@@ -100,6 +101,8 @@ export interface SyncSummary {
   changed: number;
   missing: number;
   uploaded: number;
+  uploadedImages?: number;
+  uploadedGifs?: number;
   failed: number;
   bytes: number;
   elapsedMs: number;

@@ -33,7 +33,7 @@ export default function ImageGrid({ items, query, blurred, onReveal, selectedUui
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
       {items.map((item) => {
         const isSelected = item.uuid === selectedUuid;
-        const gif = isGif(item.thumb);
+        const gif = item.is_gif || isGif(item.thumb);
         const coverClass = gif ? 'object-contain' : 'object-cover';
         return (
           <div key={item.uuid} className="relative" data-uuid={item.uuid} ref={(el) => el && itemRefs.current.set(item.uuid, el)}>

@@ -7,6 +7,7 @@ export interface ImageItem {
   width: number;
   height: number;
   favorite: boolean;
+  is_gif?: boolean;
   ts: number;
   bytes: number;
   model: string | null;

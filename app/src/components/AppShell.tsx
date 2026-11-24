@@ -5,6 +5,7 @@ import { Icon } from './Icon';
 
 const tabs = [
   { to: '/', label: 'Galeria', icon: 'image' as const, end: true },
+  { to: '/gifs', label: 'GIFs', icon: 'gif' as const, end: false },
   { to: '/favoritos', label: 'Favoritas', icon: 'heart' as const, end: false },
   { to: '/admin', label: 'Admin', icon: 'settings' as const, end: false },
 ];
@@ -28,7 +29,7 @@ export default function AppShell() {
               <Icon name="image" className="h-4.5 w-4.5" />
             </span>
             <span className="text-[15px] font-semibold tracking-tight">
-              {me?.settings.site_name ?? 'Galeria Anima'}
+              Galeria Anima V2
             </span>
           </Link>
 

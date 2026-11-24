@@ -10,6 +10,7 @@ export interface Filters {
   de: string | null;
   ate: string | null;
   fav: boolean;
+  gif?: boolean;
   sort: Sort;
   seed: number;
 }
@@ -26,6 +27,7 @@ export const emptyFilters: Filters = {
   de: null,
   ate: null,
   fav: false,
+  gif: false,
   sort: 'recentes',
   seed: 1,
 };
@@ -47,6 +49,7 @@ export function parseFilters(search: URLSearchParams): Filters {
     de: search.get('de') || null,
     ate: search.get('ate') || null,
     fav: search.get('fav') === '1',
+    gif: search.get('gif') === '1',
     sort: sort && SORTS.includes(sort) ? sort : 'recentes',
     seed: Number.parseInt(search.get('seed') ?? '1', 10) || 1,
   };
@@ -64,6 +67,7 @@ export function filtersToSearch(filters: Filters): string {
   if (filters.de) params.set('de', filters.de);
   if (filters.ate) params.set('ate', filters.ate);
   if (filters.fav) params.set('fav', '1');
+  if (filters.gif) params.set('gif', '1');
   if (filters.sort !== 'recentes') params.set('sort', filters.sort);
   if (filters.sort === 'aleatorio') params.set('seed', String(filters.seed));
   return params.toString();

@@ -41,7 +41,7 @@ export default function Login() {
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent/15 text-accent-soft">
             <Icon name="lock" className="h-6 w-6" />
           </span>
-          <h1 className="text-xl font-semibold tracking-tight">Galeria Anima</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Galeria Anima V2</h1>
           <p className="text-[13px] text-zinc-500">Acesso privado. Entre com sua conta de administrador.</p>
         </div>
 

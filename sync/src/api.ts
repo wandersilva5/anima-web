@@ -153,10 +153,26 @@ export class SyncApi {
 
   async upload(item: ScanItem, sha256: string): Promise<{ status: string; uuid: string }> {
     await this.prepare();
-    const [imageBuffer, metadataRaw] = await Promise.all([
-      fs.readFile(item.imagePath),
-      fs.readFile(item.metadataPath, 'utf8'),
-    ]);
+    const imageBuffer = await fs.readFile(item.imagePath);
+    let metadataRaw = item.metadataContent;
+    if (!metadataRaw && item.metadataPath) {
+      try {
+        metadataRaw = await fs.readFile(item.metadataPath, 'utf8');
+      } catch {
+        metadataRaw = undefined;
+      }
+    }
+    if (!metadataRaw) {
+      metadataRaw = JSON.stringify({
+        params: {
+          prompt: item.imageName.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '),
+          negativePrompt: '',
+          modelName: 'GIF',
+        },
+        images: [{ filename: item.imageName }],
+        timestamp: item.mtimeMs,
+      });
+    }
 
     const form = new FormData();
     form.append('uuid', item.uuid);
@@ -199,6 +215,7 @@ export class SyncApi {
 
 function mimeFor(filename: string): string {
   const lower = filename.toLowerCase();
+  if (lower.endsWith('.gif')) return 'image/gif';
   if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
   if (lower.endsWith('.webp')) return 'image/webp';
   return 'image/png';

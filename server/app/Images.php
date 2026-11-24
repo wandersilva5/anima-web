@@ -42,6 +42,7 @@ final class Images
             'de' => self::dateToMs(Http::query('de')),
             'ate' => self::dateToMs(Http::query('ate'), true),
             'fav' => Http::query('fav') === '1',
+            'gif' => Http::query('gif') === '1',
             'sort' => $sort,
             'seed' => Http::queryInt('seed', 1, 1, 999999999),
             'trash' => false,
@@ -123,6 +124,9 @@ final class Images
         if (!empty($f['fav'])) {
             $clauses[] = 'i.favorite = 1';
         }
+        if (!empty($f['gif'])) {
+            $clauses[] = "(i.filename LIKE '%.gif' OR i.path_orig LIKE '%.gif')";
+        }
 
         return ['WHERE ' . implode(' AND ', $clauses), $params];
     }
@@ -173,7 +177,7 @@ final class Images
         }
 
         $rows = Db::all(
-            'SELECT i.id, i.uuid, i.width, i.height, i.path_thumb, i.path_disp, i.favorite, i.ts_ms,
+            'SELECT i.id, i.uuid, i.width, i.height, i.path_thumb, i.path_disp, i.path_orig, i.filename, i.favorite, i.ts_ms,
                     i.bytes, m.name AS model_name
              ' . self::fromClause() . ' ' . $where . $extra . '
              ORDER BY ' . $order . '
@@ -206,6 +210,10 @@ final class Images
 
     private static function mapListItem(array $row): array
     {
+        $isGif = str_ends_with(strtolower((string) ($row['path_orig'] ?? '')), '.gif')
+            || str_ends_with(strtolower((string) ($row['filename'] ?? '')), '.gif')
+            || str_ends_with(strtolower((string) ($row['path_thumb'] ?? '')), '.gif');
+
         return [
             'uuid' => $row['uuid'],
             'thumb' => Media::versionedUrl($row['path_thumb']),
@@ -213,6 +221,7 @@ final class Images
             'width' => (int) $row['width'],
             'height' => (int) $row['height'],
             'favorite' => (int) $row['favorite'] === 1,
+            'is_gif' => $isGif,
             'ts' => (int) $row['ts_ms'],
             'bytes' => (int) $row['bytes'],
             'model' => $row['model_name'],

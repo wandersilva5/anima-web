@@ -12,16 +12,19 @@ import type { Facets, ImageItem, Sort } from '../lib/types';
 
 interface Props {
   forceFavorites?: boolean;
+  forceGifs?: boolean;
 }
 
-export default function Gallery({ forceFavorites = false }: Props) {
+export default function Gallery({ forceFavorites = false, forceGifs = false }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { me } = useAuth();
 
   const filters = useMemo<Filters>(() => {
-    const parsed = parseFilters(searchParams);
-    return forceFavorites ? { ...parsed, fav: true } : parsed;
-  }, [searchParams, forceFavorites]);
+    let parsed = parseFilters(searchParams);
+    if (forceFavorites) parsed = { ...parsed, fav: true };
+    if (forceGifs) parsed = { ...parsed, gif: true };
+    return parsed;
+  }, [searchParams, forceFavorites, forceGifs]);
 
   const query = useMemo(() => filtersToSearch(filters), [filters]);
 
@@ -45,10 +48,12 @@ export default function Gallery({ forceFavorites = false }: Props) {
 
   const update = useCallback(
     (value: Filters) => {
-      const nextFilters = forceFavorites ? { ...value, fav: true } : value;
+      let nextFilters = value;
+      if (forceFavorites) nextFilters = { ...nextFilters, fav: true };
+      if (forceGifs) nextFilters = { ...nextFilters, gif: true };
       setSearchParams(new URLSearchParams(filtersToSearch(nextFilters)), { replace: true });
     },
-    [forceFavorites, setSearchParams],
+    [forceFavorites, forceGifs, setSearchParams],
   );
 
   useEffect(() => {
@@ -320,7 +325,11 @@ export default function Gallery({ forceFavorites = false }: Props) {
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-ink-700 px-6 py-14 text-center">
           <Icon name="image" className="h-8 w-8 text-zinc-600" />
           <p className="text-sm text-zinc-400">
-            {forceFavorites ? 'Nenhuma imagem favorita ainda.' : 'Nenhuma imagem encontrada com esses filtros.'}
+            {forceGifs
+              ? 'Nenhum GIF encontrado ainda.'
+              : forceFavorites
+                ? 'Nenhuma imagem favorita ainda.'
+                : 'Nenhuma imagem encontrada com esses filtros.'}
           </p>
           {activeCount > 0 && (
             <button

@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "deploy": "cd .. && npx wrangler pages deploy server/public --project-name wsengenhariadigital-com-br"
+    "deploy": "cd .. && powershell -NoProfile -ExecutionPolicy Bypass -File tools/deploy.ps1 -Build"
   },
   "dependencies": {
     "react": "^18.3.1",

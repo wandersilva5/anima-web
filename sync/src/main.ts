@@ -97,6 +97,8 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
 
   let scanned = 0;
   let uploaded = 0;
+  let uploadedImages = 0;
+  let uploadedGifs = 0;
   let failed = 0;
   let bytes = 0;
   let total = 0;
@@ -146,7 +148,9 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
       if (!entry) return true;
       return entry.mtimeMs !== item.mtimeMs || entry.size !== item.size;
     });
-    log(`${allItems.length} geracoes encontradas, ${changed.length} novas ou alteradas.`);
+    log(
+      `Varredura: ${items.length} imagem(ns) e ${gifItems.length} GIF(s) encontrados (${allItems.length} no total). ${changed.length} novos ou alterados.`,
+    );
 
     const hashes = new Map<string, string>();
 
@@ -206,8 +210,20 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
     total = missing.length;
     const bytesTotal = missing.reduce((sum, entry) => sum + (byUuid.get(entry.uuid)?.size ?? 0), 0);
 
-    log(`Servidor precisa de ${total} imagem(ns).`);
-    emit({ ...emptyProgress('plan', `${total} imagem(ns) para enviar.`), scanned: items.length, total, bytesTotal });
+    const missingGifs = missing.filter((entry) => byUuid.get(entry.uuid)?.imageName.toLowerCase().endsWith('.gif')).length;
+    const missingImages = total - missingGifs;
+
+    if (total === 0) {
+      log('Tudo atualizado! Nenhuma imagem ou GIF pendente.');
+    } else {
+      log(`Servidor precisa de ${total} arquivo(s): ${missingImages} imagem(ns) e ${missingGifs} GIF(s).`);
+    }
+    emit({
+      ...emptyProgress('plan', total === 0 ? 'Tudo atualizado.' : `${total} arquivo(s) (${missingImages} imagens, ${missingGifs} GIFs) para enviar.`),
+      scanned: allItems.length,
+      total,
+      bytesTotal,
+    });
 
     // 3) Envia.
     if (total > 0 && !dryRun) {
@@ -235,11 +251,18 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
             });
             uploaded++;
             bytes += item.size;
+            const isGif = item.imageName.toLowerCase().endsWith('.gif');
+            if (isGif) { uploadedGifs++; } else { uploadedImages++; }
+            const typeTag = isGif ? '[GIF]' : '[IMG]';
             if (uploaded % STATE_FLUSH_EVERY === 0) state.flush();
-            if (result.status === 'already_exists') log(`${item.uuid} ja existia no servidor.`);
+            if (result.status === 'already_exists') {
+              log(`${typeTag} ${item.imageName} já existia no servidor.`);
+            } else {
+              log(`Enviado ${typeTag}: ${item.imageName} (${(item.size / 1024).toFixed(0)} KB)`);
+            }
           } catch (error) {
             failed++;
-            log(`Falha ao enviar ${item.uuid}: ${(error as Error).message}`, 'error');
+            log(`Falha ao enviar ${item.imageName} (${item.uuid}): ${(error as Error).message}`, 'error');
           }
           done++;
             emit({
@@ -265,16 +288,22 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
       changed: changed.length,
       missing: total,
       uploaded,
+      uploadedImages,
+      uploadedGifs,
       failed,
       bytes,
       elapsedMs: Date.now() - startedAt,
     };
 
+    const doneMsg = dryRun
+      ? `Simulação concluída: ${total} pendente(s) (${missingImages} imagens, ${missingGifs} GIFs) de ${allItems.length} no total.`
+      : `Concluído: ${uploaded} arquivo(s) enviado(s) (${uploadedImages} imagens, ${uploadedGifs} GIFs), ${failed} falha(s).`;
+
     if (cancelRequested) {
       emit({ ...emptyProgress('cancelled', 'Sincronizacao cancelada.'), done, failed, bytes, bytesTotal });
     } else {
       emit({
-        ...emptyProgress('done', dryRun ? 'Simulacao concluida.' : 'Sincronizacao concluida.'),
+        ...emptyProgress('done', doneMsg),
         scanned: allItems.length,
         hashed: hashes.size,
         total,
@@ -283,11 +312,7 @@ async function runSync(dryRun: boolean): Promise<SyncSummary> {
         bytes,
         bytesTotal,
       });
-      log(
-        dryRun
-          ? `Simulacao: ${total} pendente(s) de ${allItems.length}.`
-          : `Concluido: ${uploaded} enviada(s), ${failed} falha(s).`,
-      );
+      log(doneMsg);
     }
 
     return summary;

@@ -6,7 +6,7 @@ import type { SyncConfig } from './types';
 const DEFAULT_HISTORY = 'E:\\Anima2000\\anima-electron\\history';
 const DEFAULT_GIF_DIR = 'E:\\Anima2000\\anima-electron\\history-gifs';
 const DEFAULT_TRASH = 'E:\\Anima2000\\_trash';
-const DEFAULT_BASE_URL = 'https://femipro.trustchoicereviews.com/';
+const DEFAULT_BASE_URL = 'https://wsengenhariadigital.com.br/anima/';
 
 interface StoredConfig {
   historyDir?: string;
