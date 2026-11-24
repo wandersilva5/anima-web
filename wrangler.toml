@@ -1,3 +1,19 @@
+# ==============================================================================
+# ATENÇÃO: NÃO UTILIZAR CLOUDFLARE WORKERS OU PAGES PARA ESTE PROJETO!
+#
+# O projeto Galeria Anima requer backend PHP 8.2+ e banco de dados MySQL
+# rodando no Apache (InfinityFree).
+#
+# O Cloudflare Workers/Pages roda apenas JavaScript/V8 estático e NÃO executa
+# PHP nem possui suporte a banco de dados relacional MySQL.
+# Subir via "wrangler deploy" quebra o projeto gerando uma URL órfã sem backend.
+#
+# O deploy OFICIAL do frontend compilado e do backend PHP é feito exclusivamente via:
+#   publicar.bat   OU   powershell -File tools/deploy.ps1 -Build
+#
+# Destino oficial: https://wsengenhariadigital.com.br/anima/
+# ==============================================================================
+
 name = "anima-web"
 compatibility_date = "2026-11-17"
 

@@ -102,13 +102,14 @@ Tudo trafega JSON em `/api`, exceto as mídias.
 | Filtros | `GET /api/facets`, `GET /api/dictionary`, `GET /api/search/tags`, `GET /api/stats` | sessão |
 | Lixeira | `GET /api/admin/trash`, `POST /api/admin/images/{uuid}/restore` | sessão |
 | Sincronização | `POST /api/sync/plan`, `POST /api/sync/upload`, `GET /api/sync/stats`, `GET /api/sync/ping`, `GET /api/sync/deletions`, `POST /api/sync/deletions/{id}/ack` | Bearer token |
-| Mídia | `GET /media/{o,d,t}/aa/bb/<sha256>.<ext>` | **sessão** |
+| Mídia | `GET /media/{o,d,t}/aa/bb/<sha256>.<ext>` | pública/estática via Apache |
 
 Requisições que alteram dados (`POST`) também exigem o cabeçalho `X-CSRF-Token` com o valor
 devolvido por `/api/auth/me`.
 
-As imagens **não** são servidas como arquivo estático: o `.htaccess` manda `/media/*` para o
-front controller, que valida a sessão antes de entregar o arquivo. Sem login, a resposta é `401`.
+Em produção, os arquivos de mídia em `/media/` são servidos diretamente pelo Apache com cache
+agressivo (`max-age=31536000`), evitando sobrecarga no PHP do hosting gratuito. A proteção
+da galeria é mantida pelo controle de sessão na SPA e nos endpoints da API.
 
 As URLs de mídia levam `?v=<mtime>` no final: quando o arquivo muda (rotação, por exemplo), o
 endereço muda e nem o cache do navegador nem o service worker continuam mostrando a versão antiga.
@@ -137,16 +138,30 @@ painel.bat
 
 ## Publicação (deploy)
 
+A publicação do projeto é **exclusivamente feita via FTP/FTPS** para o servidor que roda PHP + MySQL (InfinityFree / Hostinger), sob a URL oficial:
+👉 **`https://wsengenhariadigital.com.br/anima/`**
+
+> ⚠️ **NÃO utilize `wrangler deploy` ou Cloudflare Pages/Workers para este projeto!**  
+> O Cloudflare Workers não executa PHP nem suporta MySQL relacional. O Cloudflare deve ser usado apenas como Proxy/DNS apontando para a hospedagem.
+
+### Como publicar
+
+Pelo atalho no Windows:
 ```bat
 publicar.bat
 ```
 
-Equivale a:
-
+Ou via terminal PowerShell:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File "tools\deploy.ps1" -Build
 ```
 
+Ou pelo comando npm dentro de `app/`:
+```bash
+npm run deploy
+```
+
+- O script executa automaticamente o build do frontend React (`tsc --noEmit && vite build`), gerando os bundles com base `/anima/` dentro de `server/public/`.
 - Configuração em `tools/deploy.config.json` (fora do Git): `host`, `port`, `tls`, `user`,
   `password`, `remotePublic`, `remotePrivate`.
 - Envia `server/public/*` → `remotePublic`, e `server/app` + `server/db` → `remotePrivate`.
@@ -156,7 +171,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "tools\deploy.ps1" -Build
 | Flag | Efeito |
 |---|---|
 | `-DryRun` | mostra o que seria enviado |
-| `-Force` | reenvia tudo (necessário em servidor novo) |
+| `-Force` | reenvia tudo (útil para forçar substituição de cache e arquivos) |
 | `-UploadEnv` | inclui o `server/.env` (por padrão ele nunca é tocado) |
 | `-Build` | roda o build do frontend antes de enviar |
 
