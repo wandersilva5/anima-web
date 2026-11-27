@@ -7,7 +7,6 @@ interface Props {
   onNext?: () => void;
   onClose: () => void;
   onTap?: () => void;
-  isGif?: boolean;
 }
 
 interface Point {
@@ -15,7 +14,7 @@ interface Point {
   y: number;
 }
 
-export default function SwipeViewer({ src, alt, onPrev, onNext, onClose, onTap, isGif }: Props) {
+export default function SwipeViewer({ src, alt, onPrev, onNext, onClose, onTap }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const transform = useRef({ scale: 1, x: 0, y: 0 });
@@ -286,12 +285,6 @@ export default function SwipeViewer({ src, alt, onPrev, onNext, onClose, onTap, 
       {zoomed && (
         <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] text-white/80">
           2 dedos para mover · 2 toques para voltar
-        </span>
-      )}
-
-      {isGif && (
-        <span className="pointer-events-none absolute right-1 bottom-1 z-10 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white">
-          GIF
         </span>
       )}
     </div>

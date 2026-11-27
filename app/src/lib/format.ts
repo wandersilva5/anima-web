@@ -45,6 +45,3 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function isGif(filenameOrUrl: string): boolean {
-  return /\.(gif)(\?.*)?$/i.test(filenameOrUrl);
-}

@@ -6,7 +6,6 @@ import SwipeViewer from '../components/SwipeViewer';
 import { api, ApiError } from '../lib/api';
 import { parseFilters } from '../lib/filters';
 import { formatNumber } from '../lib/format';
-import { isGif } from '../lib/format';
 import type { ImageDetail } from '../lib/types';
 
 /** Mesmo limite padrao usado pelo grid em /api/images. */
@@ -224,7 +223,6 @@ export default function Viewer() {
             key={detail.uuid}
             src={detail.urls.display}
             alt={detail.filename}
-            isGif={isGif(detail.filename)}
             onPrev={detail.neighbors.prev ? () => go(detail.neighbors.prev as string) : undefined}
             onNext={detail.neighbors.next ? () => go(detail.neighbors.next as string) : undefined}
             onClose={back}

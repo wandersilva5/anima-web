@@ -3,8 +3,6 @@
 export interface SyncConfig {
   /** Pasta `history` do Anima (fonte da verdade). */
   historyDir: string;
-  /** Pasta dedicada apenas a GIFs (opcional). Se vazia, usa a mesma historyDir. */
-  gifDir: string;
   /** Para onde as pastas excluidas sao movidas (retencao local). */
   trashDir: string;
   /** URL do site, ex.: https://femipro.trustchoicereviews.com */
@@ -19,7 +17,6 @@ export interface ScanItem {
   uuid: string;
   folderPath: string;
   metadataPath: string;
-  metadataContent?: string;
   imagePath: string;
   imageName: string;
   /** Maior mtime entre metadata.json e a imagem. */
@@ -101,8 +98,6 @@ export interface SyncSummary {
   changed: number;
   missing: number;
   uploaded: number;
-  uploadedImages?: number;
-  uploadedGifs?: number;
   failed: number;
   bytes: number;
   elapsedMs: number;

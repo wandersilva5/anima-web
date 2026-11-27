@@ -4,7 +4,6 @@ import { RequireAuth } from './context/AuthContext';
 import Admin from './pages/Admin';
 import Favorites from './pages/Favorites';
 import Gallery from './pages/Gallery';
-import Gifs from './pages/Gifs';
 import Login from './pages/Login';
 import Viewer from './pages/Viewer';
 
@@ -28,7 +27,6 @@ export default function App() {
         }
       >
         <Route path="/" element={<Gallery />} />
-        <Route path="/gifs" element={<Gifs />} />
         <Route path="/favoritos" element={<Favorites />} />
         <Route path="/admin" element={<Admin />} />
       </Route>

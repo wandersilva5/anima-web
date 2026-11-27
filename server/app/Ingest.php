@@ -46,7 +46,6 @@ final class Ingest
             IMAGETYPE_PNG => 'png',
             IMAGETYPE_JPEG => 'jpg',
             IMAGETYPE_WEBP => 'webp',
-            IMAGETYPE_GIF => 'gif',
         ];
         $ext = $allowed[$info[2]] ?? null;
         if ($ext === null) {

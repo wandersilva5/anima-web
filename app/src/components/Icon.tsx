@@ -24,8 +24,7 @@ export type IconName =
   | 'upload'
   | 'lock'
   | 'calendar'
-  | 'rotate'
-  | 'gif';
+  | 'rotate';
 
 const paths: Record<IconName, ReactNode> = {
   search: (
@@ -139,12 +138,6 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M20 12a8 8 0 1 1-2.4-5.7" />
       <path d="M20 3.5V8h-4.5" />
-    </>
-  ),
-  gif: (
-    <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M6 10h4M14 10h4M6 14h4M14 14h4" />
     </>
   ),
 };

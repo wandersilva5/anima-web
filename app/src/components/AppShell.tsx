@@ -5,7 +5,6 @@ import { Icon } from './Icon';
 
 const tabs = [
   { to: '/', label: 'Galeria', icon: 'image' as const, end: true },
-  { to: '/gifs', label: 'GIFs', icon: 'gif' as const, end: false },
   { to: '/favoritos', label: 'Favoritas', icon: 'heart' as const, end: false },
   { to: '/admin', label: 'Admin', icon: 'settings' as const, end: false },
 ];

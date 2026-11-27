@@ -20,9 +20,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      // O build cai direto no docroot do PHP (server/public)
+      // O build cai direto no docroot do PHP (server/public).
+      // emptyOutDir=false: um wipe apagaria index.php/.htaccess/robots.txt,
+      // que existem apenas aqui (nao em app/public). Assets antigos ficam para
+      // limpeza manual quando necessario.
       outDir: '../server/public',
-      emptyOutDir: true,
+      emptyOutDir: false,
       assetsDir: 'assets',
       sourcemap: false,
     },
