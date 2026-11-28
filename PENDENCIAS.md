@@ -58,20 +58,12 @@ de GIF no servidor.
 
 ---
 
-## 3. Arquivos críticos restaurados no repo (precisa commitar)
+## 3. ~~Arquivos críticos apagados do repo~~ — RESOLVIDO no commit `cb4a9ea`
 
-O commit `487c477` ("teste: mais um teste", 18/11) **apagou** do repositório:
-
-- `server/public/index.php` (545 linhas — front controller: rotas da API + SPA fallback)
-- `server/public/.htaccess` (58 linhas — rewrite, HTTPS, bloqueio de `/app`)
-- `server/public/robots.txt`
-
-No servidor eles **ainda existem** (verificado por FTP: `/wsengenhariadigital.com.br/htdocs/anima/`
-contém `.htaccess`, `index.php`, `robots.txt`), por isso o site segue no ar.
-Mas qualquer deploy limpo (hosting nova, restauração) quebraria tudo.
-
-**Feito hoje:** restaurados de `487c477^` e já staged.
-**Falta:** `git commit` (não commito sem pedido explícito).
+O commit `487c477` ("teste: mais um teste", 18/11) apagou do repositório
+`server/public/index.php`, `server/public/.htaccess` e `server/public/robots.txt`.
+Foram restaurados de `487c477^` e commitados em `cb4a9ea` (junto com a remoção dos
+GIFs) — árvore limpa, nada pendente aqui.
 
 ---
 
