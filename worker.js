@@ -51,10 +51,10 @@ export default {
     let res = await env.ASSETS.fetch(new Request(alvo, request));
 
     // Fallback da SPA: rota desconhecida devolve o index.html.
-    if (res.status === 404) {
-      res = await env.ASSETS.fetch(
-        new Request(new URL("/index.html", url.origin), request)
-      );
+    // Busca "/" e nao "/index.html": o assets padrao redireciona
+    // /index.html -> / (307), o que mandaria o visitante para a raiz do dominio.
+    if (res.status === 404 || res.status === 301 || res.status === 302 || res.status === 307 || res.status === 308) {
+      res = await env.ASSETS.fetch(new Request(new URL("/", url.origin), request));
     }
 
     return res;
