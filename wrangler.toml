@@ -1,21 +1,36 @@
 # ==============================================================================
-# ATENÇÃO: NÃO UTILIZAR CLOUDFLARE WORKERS OU PAGES PARA ESTE PROJETO!
+# Worker da Galeria Anima -> https://wsengenhariadigital.com.br/anima/
 #
-# O projeto Galeria Anima requer backend PHP 8.2+ e banco de dados MySQL
-# rodando no Apache (InfinityFree).
+# Arquitetura (regra atual do projeto, sobrescreve a antiga "so proxy/DNS"):
 #
-# O Cloudflare Workers/Pages roda apenas JavaScript/V8 estático e NÃO executa
-# PHP nem possui suporte a banco de dados relacional MySQL.
-# Subir via "wrangler deploy" quebra o projeto gerando uma URL órfã sem backend.
+#   * O bundle estatico (server/public) e servido por ESTA Worker em /anima/*.
+#   * /anima/api/*, /anima/media/* e *.php sao enviados por PROXY para a
+#     origem InfinityFree (185.27.134.95), que continua rodando PHP 8.2 +
+#     MySQL. Sem esse proxy o login e as midias quebrariam.
+#   * O backend PHP continua sendo publicado por FTPS, como sempre:
+#     publicar.bat  OU  powershell -File tools\deploy.ps1 -Build
 #
-# O deploy OFICIAL do frontend compilado e do backend PHP é feito exclusivamente via:
-#   publicar.bat   OU   powershell -File tools/deploy.ps1 -Build
-#
-# Destino oficial: https://wsengenhariadigital.com.br/anima/
+# Deploy do FRONTEND (este arquivo + worker.js + bundle):
+#   Workers Builds do Cloudflare, conectado ao GitHub wandersilva5/anima-web,
+#   branch main: build_command "cd app && npm ci && npm run build",
+#   deploy_command "npx wrangler deploy".
 # ==============================================================================
 
 name = "anima-web"
+main = "worker.js"
 compatibility_date = "2026-11-17"
+
+# Rotas criadas junto com cada deploy (zona wsengenhariadigital.com.br).
+# A raiz do dominio NAO e interceptada: continua indo para a origem.
+routes = [
+  { pattern = "wsengenhariadigital.com.br/anima/*", zone_name = "wsengenhariadigital.com.br" },
+  { pattern = "wsengenhariadigital.com.br/anima", zone_name = "wsengenhariadigital.com.br" }
+]
 
 [assets]
 directory = "server/public"
+# binding expoe env.ASSETS para o worker buscar o bundle
+binding = "ASSETS"
+# worker primeiro em todos os caminhos: e ela quem faz o proxy da API/media
+# e o fallback da SPA. O lookup de assets e feito dentro de worker.js.
+run_worker_first = true

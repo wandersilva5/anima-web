@@ -138,13 +138,23 @@ painel.bat
 
 ## Publicação (deploy)
 
-A publicação do projeto é **exclusivamente feita via FTP/FTPS** para o servidor que roda PHP + MySQL (InfinityFree / Hostinger), sob a URL oficial:
-👉 **`https://wsengenhariadigital.com.br/anima/`**
+A publicação está dividida em duas partes, sob a URL oficial
+👉 **`https://wsengenhariadigital.com.br/anima/`**:
 
-> ⚠️ **NÃO utilize `wrangler deploy` ou Cloudflare Pages/Workers para este projeto!**  
-> O Cloudflare Workers não executa PHP nem suporta MySQL relacional. O Cloudflare deve ser usado apenas como Proxy/DNS apontando para a hospedagem.
+| O quê | Comando | Onde roda |
+|---|---|---|
+| Frontend (bundle em `server/public`) | `git push` para o `main` | Workers Builds do Cloudflare: build + `npx wrangler deploy` |
+| Backend PHP + banco | `publicar.bat` / `deploy.ps1 -Build` | FTPS para o InfinityFree (inalterado) |
 
-### Como publicar
+> A Worker `anima-web` (`wrangler.toml` + `worker.js`) serve o bundle em
+> `/anima/*` e faz **proxy** de `/anima/api/*`, `/anima/media/*` e `*.php` para a
+> origem InfinityFree — o PHP 8.2 + MySQL continua rodando lá. O Cloudflare não
+> executa PHP: sem esse proxy o login e as mídias quebram.
+>
+> ⚠️ Não faça `wrangler deploy` manual: quem publica o frontend é o Workers
+> Builds a cada push no `main`. O deploy de backend/PHP continua só via FTPS.
+
+### Como publicar o backend (FTPS)
 
 Pelo atalho no Windows:
 ```bat

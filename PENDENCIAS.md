@@ -88,25 +88,35 @@ ASCII/URL-encode.
 
 ---
 
-## 5. Itens Cloudflare (baixa prioridade)
+## 5. Itens Cloudflare
 
-- **Não usar `wrangler deploy` neste projeto** — regra já documentada em
-  `wrangler.toml` e no README. Cloudflare só proxy/DNS.
-- O projeto **Workers `anima-web`** e o **Pages `wsengenhariadigital-com-br`**
-  são órfãos: o Pages só tem `wsengenhariadigital-com-br.pages.dev`, sem domínio.
-  O domínio real `wsengenhariadigital.com.br` é uma **zone** própria (id
-  `1b8a1aac9265e1c07592fc07255ef258`) com A record proxied → `185.27.134.95`
-  (InfinityFree). **Não precisa adicionar domínio a lugar nenhum.**
-  → Perguntar ao usuário se pode excluir os projetos órfãos.
-- Build do `anima-web` no painel nunca detectava mudanças de código (hash igual).
-  Irrelevante enquanto a regra for "deploy via FTP".
+**Regra atual (sobrescreveu a antiga "Cloudflare só proxy/DNS"):**
+
+- O **frontend** é publicado pelo **Workers Builds**: push no `main` do GitHub
+  (`wandersilva5/anima-web`) dispara build (`cd app && npm ci && npm run build`)
+  + `npx wrangler deploy` da Worker `anima-web` (`wrangler.toml` + `worker.js`).
+- A Worker serve o bundle em `/anima/*` e **proxa** `/anima/api/*`,
+  `/anima/media/*` e `*.php` para a origem InfinityFree (PHP + MySQL ficam lá).
+- O **backend** continua sendo publicado por FTPS (`publicar.bat`).
+- Rotas da Worker: `wsengenhariadigital.com.br/anima/*` e
+  `wsengenhariadigital.com.br/anima` (a raiz do domínio não é interceptada).
+- Conexão GitHub da conta: repo connection `7a9db3da-43b4-4140-a5db-c4d77b73570e`
+  (`wandersilva5/anima-web`, repo id `1440107438`, owner id `13226087`).
+- O **Pages `wsengenhariadigital-com-br`** continua órfão (só
+  `wsengenhariadigital-com-br.pages.dev`, sem domínio) — pode ser excluído.
+  Zona: `wsengenhariadigital.com.br` (id `1b8a1aac9265e1c07592fc07255ef258`),
+  A record proxied → `185.27.134.95` (InfinityFree). **Não precisa adicionar
+  domínio a lugar nenhum.**
+- ⚠️ Em 28/11/2026 a origem `185.27.134.95` respondia **520** (fora do ar) —
+  conferir antes de atribuir erro ao proxy: a Worker só repassa o erro.
 
 ---
 
 ## Checklist rápido de deploy (referência)
 
 ```bat
-publicar.bat        :: frontend + backend via FTPS (tools/deploy.ps1 -Build)
+publicar.bat        :: backend via FTPS (tools/deploy.ps1 -Build)
+git push origin main :: frontend (Workers Builds: build + wrangler deploy)
 ```
 
 - Frontend: `npm run build` em `app/` → sai em `server/public/`

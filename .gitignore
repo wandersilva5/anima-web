@@ -25,6 +25,9 @@ hospedagem_gratis.md
 # metadados da IDE
 .qoder/
 
+# cache local do wrangler (dry-run / telemetria)
+.wrangler/
+
 # sistema
 .DS_Store
 Thumbs.db
